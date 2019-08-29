@@ -16,7 +16,6 @@
  * under the License.
  */
 
-
 package org.wso2.carbon.micro.integrator.management.apis;
 
 import org.apache.axiom.om.OMElement;
@@ -24,22 +23,21 @@ import org.apache.synapse.MessageContext;
 import org.apache.synapse.config.SynapseConfiguration;
 import org.apache.synapse.config.xml.endpoints.EndpointSerializer;
 import org.apache.synapse.core.axis2.Axis2MessageContext;
-import org.apache.synapse.endpoints.AbstractEndpoint;
 import org.apache.synapse.endpoints.Endpoint;
-import org.apache.synapse.endpoints.EndpointDefinition;
 import org.json.JSONObject;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.APIResource;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import javax.xml.namespace.QName;
 
 public class EndpointResource extends APIResource {
 
-    public EndpointResource(String urlTemplate){
+    public EndpointResource(String urlTemplate) {
+
         super(urlTemplate);
     }
 
@@ -96,12 +94,6 @@ public class EndpointResource extends APIResource {
             String type = firstElement.getLocalName();
             endpointObject.put(Constants.TYPE, type);
 
-            String method = firstElement.getAttributeValue(new QName(Constants.METHOD));
-            endpointObject.put(Constants.METHOD, method);
-
-            String url = firstElement.getAttributeValue(new QName("uri-template"));
-            endpointObject.put(Constants.URL, url);
-
             jsonBody.getJSONArray(Constants.LIST).put(endpointObject);
         }
         Utils.setJsonPayLoad(axis2MessageContext, jsonBody);
@@ -125,39 +117,21 @@ public class EndpointResource extends APIResource {
 
         SynapseConfiguration configuration = messageContext.getConfiguration();
         Endpoint ep = configuration.getEndpoint(endpointName);
-        return convertEndpointToJsonObject(ep);
+        return getEndpointAsJson(ep);
     }
 
-    private JSONObject convertEndpointToJsonObject(Endpoint endpoint) {
+    /**
+     * Returns the json representation of the endpoint based on its type.
+     *
+     * @param endpoint endpoint
+     * @return json-object with endpoint details
+     */
+    private JSONObject getEndpointAsJson(Endpoint endpoint) {
 
-        if (Objects.isNull(endpoint)) {
-            return null;
-        }
+        JSONObject endpointObject = endpoint.getJsonRepresentation();
+        OMElement synapseConfiguration = EndpointSerializer.getElementFromEndpoint(endpoint);
+        endpointObject.put(Constants.SYNAPSE_CONFIGURATION, synapseConfiguration);
 
-        JSONObject endpointObject = new JSONObject();
-
-        endpointObject.put(Constants.NAME, endpoint.getName());
-
-        OMElement epElement = EndpointSerializer.getElementFromEndpoint(endpoint);
-        OMElement firstElement = epElement.getFirstElement();
-
-        String type = firstElement.getLocalName();
-        endpointObject.put(Constants.TYPE, type);
-
-        String method = firstElement.getAttributeValue(new QName(Constants.METHOD));
-        endpointObject.put(Constants.METHOD, method);
-
-        String url = firstElement.getAttributeValue(new QName("uri-template"));
-        endpointObject.put(Constants.URL, url);
-
-        EndpointDefinition def = ((AbstractEndpoint) endpoint).getDefinition();
-        if (Objects.nonNull(def)) {
-            if (def.isStatisticsEnable()) {
-                endpointObject.put(Constants.STATS, Constants.ENABLED);
-            } else {
-                endpointObject.put(Constants.STATS, Constants.DISABLED);
-            }
-        }
         return endpointObject;
     }
 }
